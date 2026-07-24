@@ -8,18 +8,23 @@
 <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-gradient-start: #0a0e27;
+    --bg-gradient-end: #1a1a40;
+  }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
     min-height: 100vh;
     padding: 40px 20px;
+    transition: background 0.5s ease;
   }
   .container {
     max-width: 900px;
     margin: 0 auto;
     background: #fff;
     border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
     overflow: hidden;
   }
   .header {
@@ -27,9 +32,25 @@
     color: #fff;
     padding: 40px;
     text-align: center;
+    position: relative;
   }
   .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
   .header p { font-size: 15px; opacity: 0.8; }
+  .theme-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s;
+  }
+  .theme-btn:hover { background: rgba(255,255,255,0.25); }
   .content { padding: 30px; }
   .upload-area {
     border: 3px dashed #c5c5c5;
@@ -218,11 +239,99 @@
     color: #666;
     margin-top: 8px;
   }
+  /* 主题弹窗 */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    width: 90%;
+    max-width: 360px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: modalIn 0.3s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .modal h3 { font-size: 18px; margin-bottom: 20px; color: #333; }
+  .color-row { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+  .color-row label { font-size: 14px; color: #555; min-width: 70px; }
+  .color-row input[type="color"] {
+    width: 50px; height: 40px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 2px;
+  }
+  .color-row input[type="text"] {
+    flex: 1;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: monospace;
+  }
+  .color-row input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+  .preset-colors {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .preset-color {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .preset-color:hover { transform: scale(1.15); }
+  .preset-color.active { border-color: #333; }
+  .modal-btns {
+    display: flex;
+    gap: 10px;
+  }
+  .modal-btns button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-save { background: #667eea; color: #fff; }
+  .btn-save:hover { background: #5a6fd6; }
+  .btn-reset { background: #f0f0f0; color: #555; }
+  .btn-reset:hover { background: #e0e0e0; }
+  .preview-strip {
+    height: 40px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    transition: background 0.3s;
+    border: 1px solid #e0e0e0;
+  }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
+    <button class="theme-btn" id="themeBtn">🎨 换背景</button>
     <h1>📄 Markdown 转 Word 工具</h1>
     <p>上传 Markdown 文件，完整转换为 Word 文档，表格自动识别并保留</p>
   </div>
@@ -270,6 +379,29 @@
   </div>
 </div>
 
+<!-- 主题设置弹窗 -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>🎨 自定义背景颜色</h3>
+    <div class="preview-strip" id="previewStrip"></div>
+    <div class="preset-colors" id="presetColors"></div>
+    <div class="color-row">
+      <label>起始色</label>
+      <input type="color" id="colorStart" value="#0a0e27">
+      <input type="text" id="textStart" value="#0a0e27" placeholder="#0a0e27">
+    </div>
+    <div class="color-row">
+      <label>结束色</label>
+      <input type="color" id="colorEnd" value="#1a1a40">
+      <input type="text" id="textEnd" value="#1a1a40" placeholder="#1a1a40">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-reset" id="btnReset">恢复默认</button>
+      <button class="btn-save" id="btnSave">保存设置</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let mdContent = "";
 let docBlob = null;
@@ -285,6 +417,142 @@ const progressWrap = document.getElementById("progressWrap");
 const progressFill = document.getElementById("progressFill");
 const progressText = document.getElementById("progressText");
 
+// ========== 主题系统 ==========
+const DEFAULT_START = "#0a0e27";
+const DEFAULT_END = "#1a1a40";
+const PRESETS = [
+  { start: "#0a0e27", end: "#1a1a40", name: "深蓝" },
+  { start: "#1a1a2e", end: "#16213e", name: "暗蓝" },
+  { start: "#0f2027", end: "#203a43", name: "墨绿" },
+  { start: "#2c3e50", end: "#4ca1af", name: "青灰" },
+  { start: "#200122", end: "#6f0000", name: "暗红" },
+  { start: "#1e3c72", end: "#2a5298", name: "海蓝" },
+  { start: "#141e30", end: "#243b55", name: "夜空" },
+  { start: "#000000", end: "#434343", name: "黑白" },
+  { start: "#3a1c71", end: "#d76d77", name: "紫粉" },
+  { start: "#11998e", end: "#38ef7d", name: "翠绿" },
+  { start: "#8e2de2", end: "#4a00e0", name: "紫电" },
+  { start: "#ff512f", end: "#dd2476", name: "日落" },
+];
+
+function loadTheme() {
+  const saved = localStorage.getItem("md2word-theme");
+  if (saved) {
+    try {
+      const t = JSON.parse(saved);
+      applyTheme(t.start, t.end);
+    } catch(e) {}
+  }
+}
+
+function applyTheme(start, end) {
+  document.documentElement.style.setProperty("--bg-gradient-start", start);
+  document.documentElement.style.setProperty("--bg-gradient-end", end);
+}
+
+function saveTheme(start, end) {
+  localStorage.setItem("md2word-theme", JSON.stringify({ start, end }));
+}
+
+function initThemeUI() {
+  const container = document.getElementById("presetColors");
+  const saved = localStorage.getItem("md2word-theme");
+  let current = saved ? JSON.parse(saved) : { start: DEFAULT_START, end: DEFAULT_END };
+  
+  container.innerHTML = PRESETS.map(p => {
+    const isActive = p.start === current.start && p.end === current.end;
+    return `<div class="preset-color ${isActive ? "active" : ""}" 
+      style="background: linear-gradient(135deg, ${p.start}, ${p.end})" 
+      data-start="${p.start}" data-end="${p.end}" title="${p.name}"></div>`;
+  }).join("");
+  
+  document.querySelectorAll(".preset-color").forEach(el => {
+    el.addEventListener("click", () => {
+      const s = el.dataset.start, e = el.dataset.end;
+      document.getElementById("colorStart").value = s;
+      document.getElementById("textStart").value = s;
+      document.getElementById("colorEnd").value = e;
+      document.getElementById("textEnd").value = e;
+      updatePreview(s, e);
+      document.querySelectorAll(".preset-color").forEach(c => c.classList.remove("active"));
+      el.classList.add("active");
+    });
+  });
+}
+
+function updatePreview(start, end) {
+  document.getElementById("previewStrip").style.background = `linear-gradient(135deg, ${start}, ${end})`;
+}
+
+// 弹窗控制
+document.getElementById("themeBtn").addEventListener("click", () => {
+  const saved = localStorage.getItem("md2word-theme");
+  let current = saved ? JSON.parse(saved) : { start: DEFAULT_START, end: DEFAULT_END };
+  document.getElementById("colorStart").value = current.start;
+  document.getElementById("textStart").value = current.start;
+  document.getElementById("colorEnd").value = current.end;
+  document.getElementById("textEnd").value = current.end;
+  updatePreview(current.start, current.end);
+  initThemeUI();
+  document.getElementById("modalOverlay").classList.add("show");
+});
+
+document.getElementById("modalOverlay").addEventListener("click", (e) => {
+  if (e.target === document.getElementById("modalOverlay")) {
+    document.getElementById("modalOverlay").classList.remove("show");
+  }
+});
+
+// 颜色输入同步
+["Start", "End"].forEach(side => {
+  const colorInput = document.getElementById("color" + side);
+  const textInput = document.getElementById("text" + side);
+  
+  colorInput.addEventListener("input", () => {
+    textInput.value = colorInput.value;
+    updatePreview(
+      document.getElementById("colorStart").value,
+      document.getElementById("colorEnd").value
+    );
+    document.querySelectorAll(".preset-color").forEach(c => c.classList.remove("active"));
+  });
+  
+  textInput.addEventListener("input", () => {
+    const val = textInput.value;
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+      colorInput.value = val;
+      updatePreview(
+        document.getElementById("colorStart").value,
+        document.getElementById("colorEnd").value
+      );
+      document.querySelectorAll(".preset-color").forEach(c => c.classList.remove("active"));
+    }
+  });
+});
+
+document.getElementById("btnSave").addEventListener("click", () => {
+  const s = document.getElementById("colorStart").value;
+  const e = document.getElementById("colorEnd").value;
+  applyTheme(s, e);
+  saveTheme(s, e);
+  document.getElementById("modalOverlay").classList.remove("show");
+});
+
+document.getElementById("btnReset").addEventListener("click", () => {
+  document.getElementById("colorStart").value = DEFAULT_START;
+  document.getElementById("textStart").value = DEFAULT_START;
+  document.getElementById("colorEnd").value = DEFAULT_END;
+  document.getElementById("textEnd").value = DEFAULT_END;
+  updatePreview(DEFAULT_START, DEFAULT_END);
+  applyTheme(DEFAULT_START, DEFAULT_END);
+  saveTheme(DEFAULT_START, DEFAULT_END);
+  initThemeUI();
+});
+
+// 初始化主题
+loadTheme();
+
+// ========== 文件上传 ==========
 uploadArea.addEventListener("click", () => fileInput.click());
 uploadArea.addEventListener("dragover", e => { e.preventDefault(); uploadArea.classList.add("dragover"); });
 uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
@@ -327,11 +595,9 @@ function hideProgress() {
   setTimeout(() => { progressWrap.style.display = "none"; }, 500);
 }
 
-// ========== Markdown 解析器 ==========
 function parseMarkdown(text) {
   const tokens = marked.lexer(text);
   const tables = [];
-
   function findTables(tokList) {
     for (const t of tokList) {
       if (t.type === "table") {
@@ -348,23 +614,22 @@ function parseMarkdown(text) {
   return { tokens, tables };
 }
 
-// ========== 生成 Word 文档 ==========
 async function generateDocx() {
   setProgress(10, "正在解析 Markdown...");
   const { tokens, tables } = parseMarkdown(mdContent);
   tableCount = tables.length;
-
+  
   setProgress(30, "正在构建文档结构...");
   const children = [];
-
+  
   for (const token of tokens) {
     const nodes = await tokenToDocx(token);
     if (Array.isArray(nodes)) children.push(...nodes);
     else if (nodes) children.push(nodes);
   }
-
+  
   setProgress(70, "正在生成 Word 文件...");
-
+  
   const doc = new docx.Document({
     styles: {
       paragraphStyles: [
@@ -385,7 +650,7 @@ async function generateDocx() {
       children: children
     }]
   });
-
+  
   setProgress(90, "正在打包...");
   docBlob = await docx.Packer.toBlob(doc);
   setProgress(100, "完成！");
@@ -402,15 +667,14 @@ async function tokenToDocx(token) {
         spacing: { after: 200 }
       });
     }
-
+    
     case "paragraph": {
       const runs = inlineToRuns(token.tokens || []);
       return new docx.Paragraph({ children: runs, spacing: { after: 120 } });
     }
-
+    
     case "table": {
       const rows = [];
-      // 表头
       const headerCells = token.header.map((h, i) => new docx.TableCell({
         children: [new docx.Paragraph({
           children: inlineToRuns(h.tokens || []),
@@ -422,8 +686,7 @@ async function tokenToDocx(token) {
         borders: tableCellBorders()
       }));
       rows.push(new docx.TableRow({ children: headerCells, tableHeader: true }));
-
-      // 数据行
+      
       for (const row of token.rows) {
         const cells = row.map((c, i) => new docx.TableCell({
           children: [new docx.Paragraph({
@@ -436,7 +699,7 @@ async function tokenToDocx(token) {
         }));
         rows.push(new docx.TableRow({ children: cells }));
       }
-
+      
       return new docx.Table({
         rows: rows,
         width: { size: 100, type: docx.WidthType.PERCENTAGE },
@@ -450,18 +713,17 @@ async function tokenToDocx(token) {
         }
       });
     }
-
+    
     case "code": {
-      const lines = token.text.split("\n");
-      const codeParagraphs = lines.map(line => new docx.Paragraph({
+      const lines = token.text.split("\\n");
+      return lines.map(line => new docx.Paragraph({
         children: [new docx.TextRun({ text: line || " ", font: { name: "Consolas" }, size: 18, color: "333333" })],
         shading: { fill: "F5F5F5" },
         spacing: { before: 20, after: 20, line: 276 },
         style: "CodeBlock"
       }));
-      return codeParagraphs;
     }
-
+    
     case "blockquote": {
       const quoteParagraphs = [];
       for (const t of token.tokens || []) {
@@ -479,30 +741,25 @@ async function tokenToDocx(token) {
       }
       return quoteParagraphs;
     }
-
+    
     case "list": {
-      const listItems = [];
-      for (const item of token.items || []) {
-        const runs = inlineToRuns(item.tokens || []);
-        listItems.push(new docx.Paragraph({
-          children: runs,
-          bullet: { level: 0 },
-          spacing: { after: 60 }
-        }));
-      }
-      return listItems;
+      return (token.items || []).map(item => new docx.Paragraph({
+        children: inlineToRuns(item.tokens || []),
+        bullet: { level: 0 },
+        spacing: { after: 60 }
+      }));
     }
-
+    
     case "hr": {
       return new docx.Paragraph({
         border: { bottom: { color: "CCCCCC", space: 1, style: docx.BorderStyle.SINGLE, size: 6 } },
         spacing: { before: 200, after: 200 }
       });
     }
-
+    
     case "space":
       return null;
-
+      
     default:
       return null;
   }
@@ -537,8 +794,7 @@ function inlineToRuns(tokens) {
           text: t.text || t.href,
           color: "0563C1",
           underline: { type: docx.UnderlineType.SINGLE },
-          font: { name: "Calibri" },
-          size: 22
+          font: { name: "Calibri" }, size: 22
         }));
         break;
       case "br":
@@ -568,21 +824,18 @@ function tableCellBorders() {
   };
 }
 
-// ========== 预览渲染 ==========
 function renderPreview(tables) {
-  // 统计
   const totalRows = tables.reduce((s, t) => s + t.rows.length, 0);
-  const totalLines = mdContent.split("\n").length;
+  const totalLines = mdContent.split("\\n").length;
   document.getElementById("statsBar").innerHTML = `
     <div class="stat-item"><div class="stat-num">${tables.length}</div><div class="stat-label">识别表格</div></div>
     <div class="stat-item"><div class="stat-num">${totalRows}</div><div class="stat-label">数据行数</div></div>
     <div class="stat-item"><div class="stat-num">${totalLines}</div><div class="stat-label">文档总行</div></div>
   `;
-
-  // 表格预览
+  
   const container = document.getElementById("tabTables");
   if (tables.length === 0) {
-    container.innerHTML = '<div class="empty-state">文档中未检测到 Markdown 表格</div>';
+    container.innerHTML = \'<div class="empty-state">文档中未检测到 Markdown 表格</div>\';
   } else {
     container.innerHTML = tables.map((t, i) => `
       <div class="table-item">
@@ -598,8 +851,7 @@ function renderPreview(tables) {
       </div>
     `).join("");
   }
-
-  // 文档预览
+  
   document.getElementById("docPreview").textContent = mdContent;
 }
 
@@ -609,7 +861,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// ========== Tab 切换 ==========
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -619,12 +870,11 @@ document.querySelectorAll(".tab").forEach(tab => {
   });
 });
 
-// ========== 转换按钮 ==========
 btnConvert.addEventListener("click", async () => {
   if (!mdContent) return;
   btnConvert.disabled = true;
   btnConvert.textContent = "⏳ 转换中...";
-
+  
   try {
     await generateDocx();
     const { tables } = parseMarkdown(mdContent);
@@ -635,12 +885,11 @@ btnConvert.addEventListener("click", async () => {
     alert("转换出错：" + err.message);
     console.error(err);
   }
-
+  
   btnConvert.disabled = false;
   btnConvert.textContent = "🔧 开始转换";
 });
 
-// ========== 下载按钮 ==========
 document.getElementById("btnDownload").addEventListener("click", () => {
   if (!docBlob) return;
   const url = URL.createObjectURL(docBlob);
