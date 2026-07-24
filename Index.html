@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markdown 转 Word 工具</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    overflow: hidden;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #fff;
+    padding: 40px;
+    text-align: center;
+  }
+  .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+  .header p { font-size: 15px; opacity: 0.8; }
+  .content { padding: 30px; }
+  .upload-area {
+    border: 3px dashed #c5c5c5;
+    border-radius: 16px;
+    padding: 50px 30px;
+    text-align: center;
+    background: #fafbfc;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-bottom: 24px;
+  }
+  .upload-area:hover, .upload-area.dragover {
+    border-color: #667eea;
+    background: #f0f4ff;
+    transform: translateY(-2px);
+  }
+  .upload-area input { display: none; }
+  .upload-icon { font-size: 56px; margin-bottom: 16px; }
+  .upload-title { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 8px; }
+  .upload-desc { font-size: 14px; color: #888; }
+  .file-card {
+    background: #e8f5e9;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    border: 1px solid #c8e6c9;
+  }
+  .file-info { display: flex; align-items: center; gap: 12px; }
+  .file-icon { font-size: 28px; }
+  .file-name { font-weight: 600; color: #2e7d32; font-size: 15px; }
+  .file-size { color: #66bb6a; font-size: 13px; }
+  .btn-remove {
+    background: #ef5350;
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-remove:hover { background: #d32f2f; }
+  .btn-convert {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 24px;
+  }
+  .btn-convert:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.4); }
+  .btn-convert:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .result-area { display: none; }
+  .stats-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .stat-item {
+    flex: 1;
+    min-width: 140px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid #e9ecef;
+  }
+  .stat-num { font-size: 28px; font-weight: 700; color: #667eea; }
+  .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+  }
+  .tab {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+  }
+  .tab.active { color: #667eea; border-bottom-color: #667eea; font-weight: 600; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .preview-box {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    color: #333;
+  }
+  .table-preview-wrap {
+    overflow-x: auto;
+    margin-bottom: 20px;
+  }
+  .table-preview-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .table-preview-wrap th, .table-preview-wrap td {
+    border: 1px solid #ddd;
+    padding: 10px 14px;
+    text-align: left;
+  }
+  .table-preview-wrap th {
+    background: #667eea;
+    color: #fff;
+    font-weight: 600;
+  }
+  .table-preview-wrap tr:nth-child(even) { background: #f8f9fa; }
+  .table-item { margin-bottom: 24px; }
+  .table-item-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background: #e3f2fd;
+    border-radius: 8px;
+    display: inline-block;
+  }
+  .btn-download {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    text-align: center;
+  }
+  .btn-download:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,184,148,0.4); }
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-size: 14px;
+  }
+  .progress-wrap {
+    margin-bottom: 20px;
+    display: none;
+  }
+  .progress-bar {
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    width: 0%;
+    transition: width 0.3s;
+    border-radius: 3px;
+  }
+  .progress-text {
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📄 Markdown 转 Word 工具</h1>
+    <p>上传 Markdown 文件，完整转换为 Word 文档，表格自动识别并保留</p>
+  </div>
+  <div class="content">
+    <div class="upload-area" id="uploadArea">
+      <input type="file" id="fileInput" accept=".md,.markdown,.txt">
+      <div class="upload-icon">📁</div>
+      <div class="upload-title">点击上传或拖拽 Markdown 文件到此处</div>
+      <div class="upload-desc">支持 .md、.markdown、.txt 格式</div>
+    </div>
+
+    <div id="fileCard" style="display:none;">
+      <div class="file-card">
+        <div class="file-info">
+          <span class="file-icon">📄</span>
+          <div>
+            <div class="file-name" id="fileName"></div>
+            <div class="file-size" id="fileSize"></div>
+          </div>
+        </div>
+        <button class="btn-remove" id="btnRemove">移除</button>
+      </div>
+      <button class="btn-convert" id="btnConvert">🔧 开始转换</button>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">正在解析文档...</div>
+    </div>
+
+    <div class="result-area" id="resultArea">
+      <div class="stats-bar" id="statsBar"></div>
+      <div class="tabs">
+        <button class="tab active" data-tab="tables">📊 识别到的表格</button>
+        <button class="tab" data-tab="preview">📝 文档预览</button>
+      </div>
+      <div class="tab-content active" id="tabTables"></div>
+      <div class="tab-content" id="tabPreview">
+        <div class="preview-box" id="docPreview"></div>
+      </div>
+      <div style="margin-top: 24px;">
+        <button class="btn-download" id="btnDownload">⬇️ 下载 Word 文档 (.docx)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let mdContent = "";
+let docBlob = null;
+let tableCount = 0;
+
+const uploadArea = document.getElementById("uploadArea");
+const fileInput = document.getElementById("fileInput");
+const fileCard = document.getElementById("fileCard");
+const btnRemove = document.getElementById("btnRemove");
+const btnConvert = document.getElementById("btnConvert");
+const resultArea = document.getElementById("resultArea");
+const progressWrap = document.getElementById("progressWrap");
+const progressFill = document.getElementById("progressFill");
+const progressText = document.getElementById("progressText");
+
+uploadArea.addEventListener("click", () => fileInput.click());
+uploadArea.addEventListener("dragover", e => { e.preventDefault(); uploadArea.classList.add("dragover"); });
+uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
+uploadArea.addEventListener("drop", e => {
+  e.preventDefault();
+  uploadArea.classList.remove("dragover");
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+fileInput.addEventListener("change", e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    mdContent = e.target.result;
+    document.getElementById("fileName").textContent = file.name;
+    document.getElementById("fileSize").textContent = (file.size / 1024).toFixed(1) + " KB";
+    uploadArea.style.display = "none";
+    fileCard.style.display = "block";
+    resultArea.style.display = "none";
+  };
+  reader.readAsText(file);
+}
+
+btnRemove.addEventListener("click", () => {
+  mdContent = "";
+  fileInput.value = "";
+  uploadArea.style.display = "block";
+  fileCard.style.display = "none";
+  resultArea.style.display = "none";
+});
+
+function setProgress(pct, text) {
+  progressWrap.style.display = "block";
+  progressFill.style.width = pct + "%";
+  progressText.textContent = text;
+}
+
+function hideProgress() {
+  setTimeout(() => { progressWrap.style.display = "none"; }, 500);
+}
+
+// ========== Markdown 解析器 ==========
+function parseMarkdown(text) {
+  const tokens = marked.lexer(text);
+  const tables = [];
+
+  function findTables(tokList) {
+    for (const t of tokList) {
+      if (t.type === "table") {
+        tables.push({
+          header: t.header.map(h => h.text),
+          align: t.align,
+          rows: t.rows.map(r => r.map(c => c.text))
+        });
+      }
+      if (t.tokens) findTables(t.tokens);
+    }
+  }
+  findTables(tokens);
+  return { tokens, tables };
+}
+
+// ========== 生成 Word 文档 ==========
+async function generateDocx() {
+  setProgress(10, "正在解析 Markdown...");
+  const { tokens, tables } = parseMarkdown(mdContent);
+  tableCount = tables.length;
+
+  setProgress(30, "正在构建文档结构...");
+  const children = [];
+
+  for (const token of tokens) {
+    const nodes = await tokenToDocx(token);
+    if (Array.isArray(nodes)) children.push(...nodes);
+    else if (nodes) children.push(nodes);
+  }
+
+  setProgress(70, "正在生成 Word 文件...");
+
+  const doc = new docx.Document({
+    styles: {
+      paragraphStyles: [
+        { id: "Normal", name: "Normal", run: { font: { name: "Calibri" }, size: 22 } },
+        { id: "Heading1", name: "Heading 1", run: { font: { name: "Calibri" }, size: 36, bold: true, color: "1a1a2e" }, paragraph: { spacing: { after: 200 } } },
+        { id: "Heading2", name: "Heading 2", run: { font: { name: "Calibri" }, size: 28, bold: true, color: "16213e" }, paragraph: { spacing: { after: 160 } } },
+        { id: "Heading3", name: "Heading 3", run: { font: { name: "Calibri" }, size: 24, bold: true, color: "333333" }, paragraph: { spacing: { after: 120 } } },
+        { id: "Heading4", name: "Heading 4", run: { font: { name: "Calibri" }, size: 22, bold: true, color: "444444" }, paragraph: { spacing: { after: 100 } } },
+        { id: "Heading5", name: "Heading 5", run: { font: { name: "Calibri" }, size: 22, bold: true, color: "555555" }, paragraph: { spacing: { after: 80 } } },
+        { id: "Heading6", name: "Heading 6", run: { font: { name: "Calibri" }, size: 22, bold: true, color: "666666" }, paragraph: { spacing: { after: 80 } } },
+        { id: "CodeBlock", name: "Code Block", run: { font: { name: "Consolas" }, size: 18, color: "333333" }, paragraph: { spacing: { before: 80, after: 80 } } },
+      ]
+    },
+    sections: [{
+      properties: {
+        page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } }
+      },
+      children: children
+    }]
+  });
+
+  setProgress(90, "正在打包...");
+  docBlob = await docx.Packer.toBlob(doc);
+  setProgress(100, "完成！");
+  hideProgress();
+}
+
+async function tokenToDocx(token) {
+  switch (token.type) {
+    case "heading": {
+      const level = Math.min(token.depth, 6);
+      return new docx.Paragraph({
+        text: token.text,
+        heading: docx.HeadingLevel["HEADING_" + level],
+        spacing: { after: 200 }
+      });
+    }
+
+    case "paragraph": {
+      const runs = inlineToRuns(token.tokens || []);
+      return new docx.Paragraph({ children: runs, spacing: { after: 120 } });
+    }
+
+    case "table": {
+      const rows = [];
+      // 表头
+      const headerCells = token.header.map((h, i) => new docx.TableCell({
+        children: [new docx.Paragraph({
+          children: inlineToRuns(h.tokens || []),
+          alignment: alignToDocx(token.align[i]),
+          spacing: { before: 60, after: 60 }
+        })],
+        shading: { fill: "4472C4", type: docx.ShadingType.CLEAR },
+        verticalAlign: docx.VerticalAlign.CENTER,
+        borders: tableCellBorders()
+      }));
+      rows.push(new docx.TableRow({ children: headerCells, tableHeader: true }));
+
+      // 数据行
+      for (const row of token.rows) {
+        const cells = row.map((c, i) => new docx.TableCell({
+          children: [new docx.Paragraph({
+            children: inlineToRuns(c.tokens || []),
+            alignment: alignToDocx(token.align[i]),
+            spacing: { before: 40, after: 40 }
+          })],
+          verticalAlign: docx.VerticalAlign.CENTER,
+          borders: tableCellBorders()
+        }));
+        rows.push(new docx.TableRow({ children: cells }));
+      }
+
+      return new docx.Table({
+        rows: rows,
+        width: { size: 100, type: docx.WidthType.PERCENTAGE },
+        borders: {
+          top: { style: docx.BorderStyle.SINGLE, size: 1, color: "BFBFBF" },
+          bottom: { style: docx.BorderStyle.SINGLE, size: 1, color: "BFBFBF" },
+          left: { style: docx.BorderStyle.SINGLE, size: 1, color: "BFBFBF" },
+          right: { style: docx.BorderStyle.SINGLE, size: 1, color: "BFBFBF" },
+          insideHorizontal: { style: docx.BorderStyle.SINGLE, size: 1, color: "BFBFBF" },
+          insideVertical: { style: docx.BorderStyle.SINGLE, size: 1, color: "BFBFBF" },
+        }
+      });
+    }
+
+    case "code": {
+      const lines = token.text.split("\n");
+      const codeParagraphs = lines.map(line => new docx.Paragraph({
+        children: [new docx.TextRun({ text: line || " ", font: { name: "Consolas" }, size: 18, color: "333333" })],
+        shading: { fill: "F5F5F5" },
+        spacing: { before: 20, after: 20, line: 276 },
+        style: "CodeBlock"
+      }));
+      return codeParagraphs;
+    }
+
+    case "blockquote": {
+      const quoteParagraphs = [];
+      for (const t of token.tokens || []) {
+        const nodes = await tokenToDocx(t);
+        if (Array.isArray(nodes)) {
+          for (const n of nodes) {
+            if (n instanceof docx.Paragraph) {
+              n.properties = n.properties || {};
+              n.properties.indent = { left: 720 };
+              n.properties.shading = { fill: "F8F9FA" };
+              quoteParagraphs.push(n);
+            }
+          }
+        }
+      }
+      return quoteParagraphs;
+    }
+
+    case "list": {
+      const listItems = [];
+      for (const item of token.items || []) {
+        const runs = inlineToRuns(item.tokens || []);
+        listItems.push(new docx.Paragraph({
+          children: runs,
+          bullet: { level: 0 },
+          spacing: { after: 60 }
+        }));
+      }
+      return listItems;
+    }
+
+    case "hr": {
+      return new docx.Paragraph({
+        border: { bottom: { color: "CCCCCC", space: 1, style: docx.BorderStyle.SINGLE, size: 6 } },
+        spacing: { before: 200, after: 200 }
+      });
+    }
+
+    case "space":
+      return null;
+
+    default:
+      return null;
+  }
+}
+
+function inlineToRuns(tokens) {
+  const runs = [];
+  for (const t of tokens || []) {
+    switch (t.type) {
+      case "text":
+        runs.push(new docx.TextRun({ text: t.text, font: { name: "Calibri" }, size: 22 }));
+        break;
+      case "strong":
+        runs.push(new docx.TextRun({ text: t.text, bold: true, font: { name: "Calibri" }, size: 22 }));
+        break;
+      case "em":
+        runs.push(new docx.TextRun({ text: t.text, italics: true, font: { name: "Calibri" }, size: 22 }));
+        break;
+      case "codespan":
+        runs.push(new docx.TextRun({
+          text: t.text,
+          font: { name: "Consolas" },
+          size: 20,
+          shading: { fill: "F0F0F0" }
+        }));
+        break;
+      case "del":
+        runs.push(new docx.TextRun({ text: t.text, strike: true, font: { name: "Calibri" }, size: 22 }));
+        break;
+      case "link":
+        runs.push(new docx.TextRun({
+          text: t.text || t.href,
+          color: "0563C1",
+          underline: { type: docx.UnderlineType.SINGLE },
+          font: { name: "Calibri" },
+          size: 22
+        }));
+        break;
+      case "br":
+        runs.push(new docx.TextRun({ text: "", break: 1 }));
+        break;
+      default:
+        if (t.text) runs.push(new docx.TextRun({ text: t.text, font: { name: "Calibri" }, size: 22 }));
+    }
+  }
+  if (runs.length === 0) runs.push(new docx.TextRun({ text: " ", font: { name: "Calibri" }, size: 22 }));
+  return runs;
+}
+
+function alignToDocx(align) {
+  if (!align) return docx.AlignmentType.LEFT;
+  if (align === "center") return docx.AlignmentType.CENTER;
+  if (align === "right") return docx.AlignmentType.RIGHT;
+  return docx.AlignmentType.LEFT;
+}
+
+function tableCellBorders() {
+  return {
+    top: { style: docx.BorderStyle.SINGLE, size: 1, color: "BFBFBF" },
+    bottom: { style: docx.BorderStyle.SINGLE, size: 1, color: "BFBFBF" },
+    left: { style: docx.BorderStyle.SINGLE, size: 1, color: "BFBFBF" },
+    right: { style: docx.BorderStyle.SINGLE, size: 1, color: "BFBFBF" },
+  };
+}
+
+// ========== 预览渲染 ==========
+function renderPreview(tables) {
+  // 统计
+  const totalRows = tables.reduce((s, t) => s + t.rows.length, 0);
+  const totalLines = mdContent.split("\n").length;
+  document.getElementById("statsBar").innerHTML = `
+    <div class="stat-item"><div class="stat-num">${tables.length}</div><div class="stat-label">识别表格</div></div>
+    <div class="stat-item"><div class="stat-num">${totalRows}</div><div class="stat-label">数据行数</div></div>
+    <div class="stat-item"><div class="stat-num">${totalLines}</div><div class="stat-label">文档总行</div></div>
+  `;
+
+  // 表格预览
+  const container = document.getElementById("tabTables");
+  if (tables.length === 0) {
+    container.innerHTML = '<div class="empty-state">文档中未检测到 Markdown 表格</div>';
+  } else {
+    container.innerHTML = tables.map((t, i) => `
+      <div class="table-item">
+        <div class="table-item-title">📊 表格 ${i+1} — ${t.header.length} 列 × ${t.rows.length} 行</div>
+        <div class="table-preview-wrap">
+          <table>
+            <thead><tr>${t.header.map(h => `<th>${escapeHtml(h)}</th>`).join("")}</tr></thead>
+            <tbody>
+              ${t.rows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  // 文档预览
+  document.getElementById("docPreview").textContent = mdContent;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ========== Tab 切换 ==========
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("tab" + tab.dataset.tab.charAt(0).toUpperCase() + tab.dataset.tab.slice(1)).classList.add("active");
+  });
+});
+
+// ========== 转换按钮 ==========
+btnConvert.addEventListener("click", async () => {
+  if (!mdContent) return;
+  btnConvert.disabled = true;
+  btnConvert.textContent = "⏳ 转换中...";
+
+  try {
+    await generateDocx();
+    const { tables } = parseMarkdown(mdContent);
+    renderPreview(tables);
+    resultArea.style.display = "block";
+    resultArea.scrollIntoView({ behavior: "smooth" });
+  } catch (err) {
+    alert("转换出错：" + err.message);
+    console.error(err);
+  }
+
+  btnConvert.disabled = false;
+  btnConvert.textContent = "🔧 开始转换";
+});
+
+// ========== 下载按钮 ==========
+document.getElementById("btnDownload").addEventListener("click", () => {
+  if (!docBlob) return;
+  const url = URL.createObjectURL(docBlob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "converted_document.docx";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
