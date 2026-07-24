@@ -2,335 +2,97 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Markdown 转 Word 工具</title>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg-gradient-start: #0a0e27;
-    --bg-gradient-end: #1a1a40;
-  }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-    min-height: 100vh;
-    padding: 40px 20px;
-    transition: background 0.5s ease;
-  }
-  .container {
-    max-width: 900px;
-    margin: 0 auto;
-    background: #fff;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-    overflow: hidden;
-  }
-  .header {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    color: #fff;
-    padding: 40px;
-    text-align: center;
-    position: relative;
-  }
-  .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
-  .header p { font-size: 15px; opacity: 0.8; }
-  .theme-btn {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.3);
-    color: #fff;
-    padding: 8px 14px;
-    border-radius: 10px;
-    font-size: 13px;
-    cursor: pointer;
-    backdrop-filter: blur(10px);
-    transition: all 0.2s;
-  }
-  .theme-btn:hover { background: rgba(255,255,255,0.25); }
-  .content { padding: 30px; }
-  .upload-area {
-    border: 3px dashed #c5c5c5;
-    border-radius: 16px;
-    padding: 50px 30px;
-    text-align: center;
-    background: #fafbfc;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    margin-bottom: 24px;
-  }
-  .upload-area:hover, .upload-area.dragover {
-    border-color: #667eea;
-    background: #f0f4ff;
-    transform: translateY(-2px);
-  }
+  :root { --bg-gradient-start: #0a0e27; --bg-gradient-end: #1a1a40; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%); min-height: 100vh; padding: 20px 12px; transition: background 0.5s ease; }
+  .container { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); overflow: hidden; }
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; padding: 24px 20px 32px; text-align: center; position: relative; }
+  .header h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .header p { font-size: 14px; opacity: 0.8; }
+  .header-btns { display: flex; justify-content: center; gap: 16px; margin-bottom: 40px; }
+  .header-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 14px; cursor: pointer; backdrop-filter: blur(10px); transition: all 0.2s; white-space: nowrap; font-weight: 500; }
+  .header-btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-1px); }
+  @media (max-width: 480px) { .header-btns { gap: 10px; margin-bottom: 32px; } .header-btn { padding: 8px 14px; font-size: 13px; } }
+  .content { padding: 20px; }
+  .upload-area { border: 3px dashed #c5c5c5; border-radius: 16px; padding: 40px 20px; text-align: center; background: #fafbfc; transition: all 0.3s ease; cursor: pointer; margin-bottom: 20px; }
+  .upload-area:hover, .upload-area.dragover { border-color: #667eea; background: #f0f4ff; transform: translateY(-2px); }
   .upload-area input { display: none; }
-  .upload-icon { font-size: 56px; margin-bottom: 16px; }
-  .upload-title { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 8px; }
-  .upload-desc { font-size: 14px; color: #888; }
-  .file-card {
-    background: #e8f5e9;
-    border-radius: 12px;
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    border: 1px solid #c8e6c9;
-  }
-  .file-info { display: flex; align-items: center; gap: 12px; }
-  .file-icon { font-size: 28px; }
-  .file-name { font-weight: 600; color: #2e7d32; font-size: 15px; }
-  .file-size { color: #66bb6a; font-size: 13px; }
-  .btn-remove {
-    background: #ef5350;
-    color: #fff;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 6px; }
+  .upload-desc { font-size: 13px; color: #888; }
+  .file-card { background: #e8f5e9; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border: 1px solid #c8e6c9; }
+  .file-info { display: flex; align-items: center; gap: 10px; }
+  .file-icon { font-size: 24px; }
+  .file-name { font-weight: 600; color: #2e7d32; font-size: 14px; }
+  .file-size { color: #66bb6a; font-size: 12px; }
+  .btn-remove { background: #ef5350; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: background 0.2s; }
   .btn-remove:hover { background: #d32f2f; }
-  .btn-convert {
-    display: block;
-    width: 100%;
-    padding: 14px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #fff;
-    border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    margin-bottom: 24px;
-  }
+  .btn-convert { display: block; width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-bottom: 20px; }
   .btn-convert:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.4); }
   .btn-convert:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
   .result-area { display: none; }
-  .stats-bar {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-  }
-  .stat-item {
-    flex: 1;
-    min-width: 140px;
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 16px;
-    text-align: center;
-    border: 1px solid #e9ecef;
-  }
-  .stat-num { font-size: 28px; font-weight: 700; color: #667eea; }
+  .stats-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .stat-item { flex: 1; min-width: 100px; background: #f8f9fa; border-radius: 12px; padding: 14px; text-align: center; border: 1px solid #e9ecef; }
+  .stat-num { font-size: 24px; font-weight: 700; color: #667eea; }
   .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
-  .tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 16px;
-    border-bottom: 2px solid #e9ecef;
-  }
-  .tab {
-    padding: 10px 20px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-size: 14px;
-    color: #666;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    transition: all 0.2s;
-  }
+  .tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 2px solid #e9ecef; }
+  .tab { padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; flex: 1; text-align: center; }
   .tab.active { color: #667eea; border-bottom-color: #667eea; font-weight: 600; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
-  .preview-box {
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 20px;
-    max-height: 400px;
-    overflow-y: auto;
-    border: 1px solid #e9ecef;
-    font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
-    font-size: 13px;
-    line-height: 1.7;
-    white-space: pre-wrap;
-    color: #333;
-  }
-  .table-preview-wrap {
-    overflow-x: auto;
-    margin-bottom: 20px;
-  }
-  .table-preview-wrap table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-  }
-  .table-preview-wrap th, .table-preview-wrap td {
-    border: 1px solid #ddd;
-    padding: 10px 14px;
-    text-align: left;
-  }
-  .table-preview-wrap th {
-    background: #667eea;
-    color: #fff;
-    font-weight: 600;
-  }
+  .preview-box { background: #f8f9fa; border-radius: 12px; padding: 16px; max-height: 350px; overflow-y: auto; border: 1px solid #e9ecef; font-family: "SF Mono", Monaco, monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; color: #333; }
+  .table-preview-wrap { overflow-x: auto; margin-bottom: 16px; }
+  .table-preview-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table-preview-wrap th, .table-preview-wrap td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }
+  .table-preview-wrap th { background: #667eea; color: #fff; font-weight: 600; }
   .table-preview-wrap tr:nth-child(even) { background: #f8f9fa; }
-  .table-item { margin-bottom: 24px; }
-  .table-item-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 10px;
-    padding: 8px 12px;
-    background: #e3f2fd;
-    border-radius: 8px;
-    display: inline-block;
-  }
-  .btn-download {
-    display: block;
-    width: 100%;
-    padding: 16px;
-    background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
-    color: #fff;
-    border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    text-decoration: none;
-    text-align: center;
-  }
+  .table-item { margin-bottom: 20px; }
+  .table-item-title { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; padding: 6px 10px; background: #e3f2fd; border-radius: 8px; display: inline-block; }
+  .btn-download { display: block; width: 100%; padding: 14px; background: linear-gradient(135deg, #00b894 0%, #00a085 100%); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; text-decoration: none; text-align: center; }
   .btn-download:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,184,148,0.4); }
-  .empty-state {
-    text-align: center;
-    padding: 40px;
-    color: #999;
-    font-size: 14px;
-  }
-  .progress-wrap {
-    margin-bottom: 20px;
-    display: none;
-  }
-  .progress-bar {
-    height: 6px;
-    background: #e9ecef;
-    border-radius: 3px;
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    width: 0%;
-    transition: width 0.3s;
-    border-radius: 3px;
-  }
-  .progress-text {
-    text-align: center;
-    font-size: 13px;
-    color: #666;
-    margin-top: 8px;
-  }
-  .modal-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
-  }
+  .empty-state { text-align: center; padding: 30px; color: #999; font-size: 14px; }
+  .progress-wrap { margin-bottom: 16px; display: none; }
+  .progress-bar { height: 6px; background: #e9ecef; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; transition: width 0.3s; border-radius: 3px; }
+  .progress-text { text-align: center; font-size: 13px; color: #666; margin-top: 6px; }
+  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); padding: 16px; }
   .modal-overlay.show { display: flex; }
-  .modal {
-    background: #fff;
-    border-radius: 16px;
-    padding: 28px;
-    width: 90%;
-    max-width: 360px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    animation: modalIn 0.3s ease;
-  }
-  @keyframes modalIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
-  }
-  .modal h3 { font-size: 18px; margin-bottom: 20px; color: #333; }
-  .color-row { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
-  .color-row label { font-size: 14px; color: #555; min-width: 70px; }
-  .color-row input[type="color"] {
-    width: 50px; height: 40px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    cursor: pointer;
-    padding: 2px;
-  }
-  .color-row input[type="text"] {
-    flex: 1;
-    padding: 10px 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: monospace;
-  }
-  .color-row input[type="text"]:focus {
-    outline: none;
-    border-color: #667eea;
-  }
-  .preset-colors {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-  }
-  .preset-color {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 3px solid transparent;
-    transition: all 0.2s;
-  }
+  .modal { background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.3s ease; }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  .modal h3 { font-size: 17px; margin-bottom: 16px; color: #333; }
+  .modal-section { margin-bottom: 16px; }
+  .modal-section-title { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 10px; }
+  .color-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .color-row label { font-size: 13px; color: #555; min-width: 60px; }
+  .color-row input[type="color"] { width: 42px; height: 36px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; padding: 2px; flex-shrink: 0; }
+  .color-row input[type="text"] { flex: 1; min-width: 0; padding: 8px 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-family: monospace; }
+  .color-row input[type="text"]:focus { outline: none; border-color: #667eea; }
+  .preset-colors { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .preset-color { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: all 0.2s; }
   .preset-color:hover { transform: scale(1.15); }
   .preset-color.active { border-color: #333; }
-  .modal-btns {
-    display: flex;
-    gap: 10px;
-  }
-  .modal-btns button {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
+  .modal-btns { display: flex; gap: 10px; margin-top: 8px; }
+  .modal-btns button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
   .btn-save { background: #667eea; color: #fff; }
   .btn-save:hover { background: #5a6fd6; }
   .btn-reset { background: #f0f0f0; color: #555; }
   .btn-reset:hover { background: #e0e0e0; }
-  .preview-strip {
-    height: 40px;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    transition: background 0.3s;
-    border: 1px solid #e0e0e0;
-  }
+  .preview-strip { height: 36px; border-radius: 8px; margin-bottom: 14px; transition: background 0.3s; border: 1px solid #e0e0e0; }
+  @media (max-width: 480px) { body { padding: 12px 8px; } .header { padding: 24px 16px; } .header h1 { font-size: 20px; } .header-btns { top: 8px; right: 8px; } .header-btn { padding: 5px 8px; font-size: 11px; } .content { padding: 16px; } .modal { padding: 16px; max-height: 80vh; } .color-row label { min-width: 50px; font-size: 12px; } .color-row input[type="color"] { width: 36px; height: 32px; } .color-row input[type="text"] { padding: 6px 8px; font-size: 12px; } .stat-item { min-width: 80px; padding: 10px; } .stat-num { font-size: 20px; } .tab { padding: 8px 10px; font-size: 13px; } }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
-    <button class="theme-btn" id="themeBtn">换背景</button>
+    <div class="header-btns">
+      <button class="header-btn" id="themeBtn">换背景</button>
+      <button class="header-btn" id="fontBtn">文档颜色</button>
+    </div>
     <h1>Markdown 转 Word 工具</h1>
     <p>上传 Markdown 文件，完整转换为 Word 文档，表格自动识别并保留</p>
   </div>
@@ -368,30 +130,53 @@
       <div class="tab-content" id="tabPreview">
         <div class="preview-box" id="docPreview"></div>
       </div>
-      <div style="margin-top: 24px;">
+      <div style="margin-top: 20px;">
         <button class="btn-download" id="btnDownload">下载 Word 文档 (.docx)</button>
       </div>
     </div>
   </div>
 </div>
-<div class="modal-overlay" id="modalOverlay">
+<div class="modal-overlay" id="themeModal">
   <div class="modal">
     <h3>自定义背景颜色</h3>
-    <div class="preview-strip" id="previewStrip"></div>
-    <div class="preset-colors" id="presetColors"></div>
+    <div class="preview-strip" id="themePreview"></div>
+    <div class="preset-colors" id="themePresets"></div>
     <div class="color-row">
       <label>起始色</label>
-      <input type="color" id="colorStart" value="#0a0e27">
-      <input type="text" id="textStart" value="#0a0e27" placeholder="#0a0e27">
+      <input type="color" id="themeColorStart" value="#0a0e27">
+      <input type="text" id="themeTextStart" value="#0a0e27" placeholder="#0a0e27">
     </div>
     <div class="color-row">
       <label>结束色</label>
-      <input type="color" id="colorEnd" value="#1a1a40">
-      <input type="text" id="textEnd" value="#1a1a40" placeholder="#1a1a40">
+      <input type="color" id="themeColorEnd" value="#1a1a40">
+      <input type="text" id="themeTextEnd" value="#1a1a40" placeholder="#1a1a40">
     </div>
     <div class="modal-btns">
-      <button class="btn-reset" id="btnReset">恢复默认</button>
-      <button class="btn-save" id="btnSave">保存设置</button>
+      <button class="btn-reset" id="themeReset">恢复默认</button>
+      <button class="btn-save" id="themeSave">保存设置</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="fontModal">
+  <div class="modal">
+    <h3>自定义文档字体颜色</h3>
+    <div class="modal-section">
+      <div class="modal-section-title">标题颜色</div>
+      <div class="color-row"><label>一级标题</label><input type="color" id="h1Color" value="#1a1a2e"><input type="text" id="h1Text" value="#1a1a2e"></div>
+      <div class="color-row"><label>二级标题</label><input type="color" id="h2Color" value="#16213e"><input type="text" id="h2Text" value="#16213e"></div>
+      <div class="color-row"><label>三级标题</label><input type="color" id="h3Color" value="#333333"><input type="text" id="h3Text" value="#333333"></div>
+      <div class="color-row"><label>四级标题</label><input type="color" id="h4Color" value="#444444"><input type="text" id="h4Text" value="#444444"></div>
+      <div class="color-row"><label>五级标题</label><input type="color" id="h5Color" value="#555555"><input type="text" id="h5Text" value="#555555"></div>
+      <div class="color-row"><label>六级标题</label><input type="color" id="h6Color" value="#666666"><input type="text" id="h6Text" value="#666666"></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">正文与表格</div>
+      <div class="color-row"><label>正文颜色</label><input type="color" id="bodyColor" value="#333333"><input type="text" id="bodyText" value="#333333"></div>
+      <div class="color-row"><label>表头文字</label><input type="color" id="thColor" value="#FFFFFF"><input type="text" id="thText" value="#FFFFFF"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-reset" id="fontReset">恢复默认</button>
+      <button class="btn-save" id="fontSave">保存设置</button>
     </div>
   </div>
 </div>
@@ -399,6 +184,7 @@
 let mdContent = "";
 let docBlob = null;
 let tableCount = 0;
+let originalFileName = "document";
 const uploadArea = document.getElementById("uploadArea");
 const fileInput = document.getElementById("fileInput");
 const fileCard = document.getElementById("fileCard");
@@ -408,8 +194,8 @@ const resultArea = document.getElementById("resultArea");
 const progressWrap = document.getElementById("progressWrap");
 const progressFill = document.getElementById("progressFill");
 const progressText = document.getElementById("progressText");
-const DEFAULT_START = "#0a0e27";
-const DEFAULT_END = "#1a1a40";
+const THEME_DEFAULT = { start: "#0a0e27", end: "#1a1a40" };
+const FONT_DEFAULT = { h1: "#1a1a2e", h2: "#16213e", h3: "#333333", h4: "#444444", h5: "#555555", h6: "#666666", body: "#333333", th: "#FFFFFF" };
 const PRESETS = [
   { start: "#0a0e27", end: "#1a1a40", name: "深蓝" },
   { start: "#1a1a2e", end: "#16213e", name: "暗蓝" },
@@ -422,28 +208,27 @@ const PRESETS = [
   { start: "#3a1c71", end: "#d76d77", name: "紫粉" },
   { start: "#11998e", end: "#38ef7d", name: "翠绿" },
   { start: "#8e2de2", end: "#4a00e0", name: "紫电" },
-  { start: "#ff512f", end: "#dd2476", name: "日落" },
+  { start: "#ff512f", end: "#dd2476", name: "日落" }
 ];
 function loadTheme() {
   const saved = localStorage.getItem("md2word-theme");
-  if (saved) {
-    try {
-      const t = JSON.parse(saved);
-      applyTheme(t.start, t.end);
-    } catch(e) {}
-  }
+  if (saved) { try { const t = JSON.parse(saved); applyTheme(t.start, t.end); } catch(e) {} }
 }
 function applyTheme(start, end) {
   document.documentElement.style.setProperty("--bg-gradient-start", start);
   document.documentElement.style.setProperty("--bg-gradient-end", end);
 }
-function saveTheme(start, end) {
-  localStorage.setItem("md2word-theme", JSON.stringify({ start: start, end: end }));
+function saveTheme(start, end) { localStorage.setItem("md2word-theme", JSON.stringify({ start: start, end: end })); }
+function getFontColors() {
+  const saved = localStorage.getItem("md2word-font");
+  if (saved) { try { return JSON.parse(saved); } catch(e) {} }
+  return Object.assign({}, FONT_DEFAULT);
 }
+function saveFontColors(colors) { localStorage.setItem("md2word-font", JSON.stringify(colors)); }
 function initThemeUI() {
-  const container = document.getElementById("presetColors");
+  const container = document.getElementById("themePresets");
   const saved = localStorage.getItem("md2word-theme");
-  let current = saved ? JSON.parse(saved) : { start: DEFAULT_START, end: DEFAULT_END };
+  let current = saved ? JSON.parse(saved) : Object.assign({}, THEME_DEFAULT);
   let html = "";
   for (let i = 0; i < PRESETS.length; i++) {
     const p = PRESETS[i];
@@ -451,96 +236,111 @@ function initThemeUI() {
     html += '<div class="preset-color' + (isActive ? " active" : "") + '" style="background: linear-gradient(135deg, ' + p.start + ', ' + p.end + ')" data-start="' + p.start + '" data-end="' + p.end + '" title="' + p.name + '"></div>';
   }
   container.innerHTML = html;
-  document.querySelectorAll(".preset-color").forEach(function(el) {
+  document.querySelectorAll("#themePresets .preset-color").forEach(function(el) {
     el.addEventListener("click", function() {
-      const s = el.dataset.start;
-      const e = el.dataset.end;
-      document.getElementById("colorStart").value = s;
-      document.getElementById("textStart").value = s;
-      document.getElementById("colorEnd").value = e;
-      document.getElementById("textEnd").value = e;
-      updatePreview(s, e);
-      document.querySelectorAll(".preset-color").forEach(function(c) { c.classList.remove("active"); });
+      const s = el.dataset.start; const e = el.dataset.end;
+      document.getElementById("themeColorStart").value = s;
+      document.getElementById("themeTextStart").value = s;
+      document.getElementById("themeColorEnd").value = e;
+      document.getElementById("themeTextEnd").value = e;
+      updateThemePreview(s, e);
+      document.querySelectorAll("#themePresets .preset-color").forEach(function(c) { c.classList.remove("active"); });
       el.classList.add("active");
     });
   });
 }
-function updatePreview(start, end) {
-  document.getElementById("previewStrip").style.background = "linear-gradient(135deg, " + start + ", " + end + ")";
-}
-document.getElementById("themeBtn").addEventListener("click", function() {
-  const saved = localStorage.getItem("md2word-theme");
-  let current = saved ? JSON.parse(saved) : { start: DEFAULT_START, end: DEFAULT_END };
-  document.getElementById("colorStart").value = current.start;
-  document.getElementById("textStart").value = current.start;
-  document.getElementById("colorEnd").value = current.end;
-  document.getElementById("textEnd").value = current.end;
-  updatePreview(current.start, current.end);
-  initThemeUI();
-  document.getElementById("modalOverlay").classList.add("show");
-});
-document.getElementById("modalOverlay").addEventListener("click", function(e) {
-  if (e.target === document.getElementById("modalOverlay")) {
-    document.getElementById("modalOverlay").classList.remove("show");
-  }
-});
-function setupColorSync(side) {
-  const colorInput = document.getElementById("color" + side);
-  const textInput = document.getElementById("text" + side);
+function updateThemePreview(start, end) { document.getElementById("themePreview").style.background = "linear-gradient(135deg, " + start + ", " + end + ")"; }
+function setupColorSync(colorId, textId, previewFn) {
+  const colorInput = document.getElementById(colorId);
+  const textInput = document.getElementById(textId);
+  if (!colorInput || !textInput) return;
   colorInput.addEventListener("input", function() {
     textInput.value = colorInput.value;
-    updatePreview(
-      document.getElementById("colorStart").value,
-      document.getElementById("colorEnd").value
-    );
-    document.querySelectorAll(".preset-color").forEach(function(c) { c.classList.remove("active"); });
+    if (previewFn) previewFn();
   });
   textInput.addEventListener("input", function() {
     const val = textInput.value;
-    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-      colorInput.value = val;
-      updatePreview(
-        document.getElementById("colorStart").value,
-        document.getElementById("colorEnd").value
-      );
-      document.querySelectorAll(".preset-color").forEach(function(c) { c.classList.remove("active"); });
-    }
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) { colorInput.value = val; if (previewFn) previewFn(); }
   });
 }
-setupColorSync("Start");
-setupColorSync("End");
-document.getElementById("btnSave").addEventListener("click", function() {
-  const s = document.getElementById("colorStart").value;
-  const e = document.getElementById("colorEnd").value;
-  applyTheme(s, e);
-  saveTheme(s, e);
-  document.getElementById("modalOverlay").classList.remove("show");
-});
-document.getElementById("btnReset").addEventListener("click", function() {
-  document.getElementById("colorStart").value = DEFAULT_START;
-  document.getElementById("textStart").value = DEFAULT_START;
-  document.getElementById("colorEnd").value = DEFAULT_END;
-  document.getElementById("textEnd").value = DEFAULT_END;
-  updatePreview(DEFAULT_START, DEFAULT_END);
-  applyTheme(DEFAULT_START, DEFAULT_END);
-  saveTheme(DEFAULT_START, DEFAULT_END);
+document.getElementById("themeBtn").addEventListener("click", function() {
+  const saved = localStorage.getItem("md2word-theme");
+  let current = saved ? JSON.parse(saved) : Object.assign({}, THEME_DEFAULT);
+  document.getElementById("themeColorStart").value = current.start;
+  document.getElementById("themeTextStart").value = current.start;
+  document.getElementById("themeColorEnd").value = current.end;
+  document.getElementById("themeTextEnd").value = current.end;
+  updateThemePreview(current.start, current.end);
   initThemeUI();
+  document.getElementById("themeModal").classList.add("show");
+});
+document.getElementById("fontBtn").addEventListener("click", function() {
+  const colors = getFontColors();
+  document.getElementById("h1Color").value = colors.h1; document.getElementById("h1Text").value = colors.h1;
+  document.getElementById("h2Color").value = colors.h2; document.getElementById("h2Text").value = colors.h2;
+  document.getElementById("h3Color").value = colors.h3; document.getElementById("h3Text").value = colors.h3;
+  document.getElementById("h4Color").value = colors.h4; document.getElementById("h4Text").value = colors.h4;
+  document.getElementById("h5Color").value = colors.h5; document.getElementById("h5Text").value = colors.h5;
+  document.getElementById("h6Color").value = colors.h6; document.getElementById("h6Text").value = colors.h6;
+  document.getElementById("bodyColor").value = colors.body; document.getElementById("bodyText").value = colors.body;
+  document.getElementById("thColor").value = colors.th; document.getElementById("thText").value = colors.th;
+  document.getElementById("fontModal").classList.add("show");
+});
+document.getElementById("themeModal").addEventListener("click", function(e) { if (e.target === document.getElementById("themeModal")) document.getElementById("themeModal").classList.remove("show"); });
+document.getElementById("fontModal").addEventListener("click", function(e) { if (e.target === document.getElementById("fontModal")) document.getElementById("fontModal").classList.remove("show"); });
+setupColorSync("themeColorStart", "themeTextStart", function() { updateThemePreview(document.getElementById("themeColorStart").value, document.getElementById("themeColorEnd").value); });
+setupColorSync("themeColorEnd", "themeTextEnd", function() { updateThemePreview(document.getElementById("themeColorStart").value, document.getElementById("themeColorEnd").value); });
+setupColorSync("h1Color", "h1Text"); setupColorSync("h2Color", "h2Text"); setupColorSync("h3Color", "h3Text");
+setupColorSync("h4Color", "h4Text"); setupColorSync("h5Color", "h5Text"); setupColorSync("h6Color", "h6Text");
+setupColorSync("bodyColor", "bodyText"); setupColorSync("thColor", "thText");
+document.getElementById("themeSave").addEventListener("click", function() {
+  const s = document.getElementById("themeColorStart").value;
+  const e = document.getElementById("themeColorEnd").value;
+  applyTheme(s, e); saveTheme(s, e);
+  document.getElementById("themeModal").classList.remove("show");
+});
+document.getElementById("themeReset").addEventListener("click", function() {
+  document.getElementById("themeColorStart").value = THEME_DEFAULT.start;
+  document.getElementById("themeTextStart").value = THEME_DEFAULT.start;
+  document.getElementById("themeColorEnd").value = THEME_DEFAULT.end;
+  document.getElementById("themeTextEnd").value = THEME_DEFAULT.end;
+  updateThemePreview(THEME_DEFAULT.start, THEME_DEFAULT.end);
+  applyTheme(THEME_DEFAULT.start, THEME_DEFAULT.end);
+  saveTheme(THEME_DEFAULT.start, THEME_DEFAULT.end);
+  initThemeUI();
+});
+document.getElementById("fontSave").addEventListener("click", function() {
+  const colors = {
+    h1: document.getElementById("h1Color").value, h2: document.getElementById("h2Color").value,
+    h3: document.getElementById("h3Color").value, h4: document.getElementById("h4Color").value,
+    h5: document.getElementById("h5Color").value, h6: document.getElementById("h6Color").value,
+    body: document.getElementById("bodyColor").value, th: document.getElementById("thColor").value
+  };
+  saveFontColors(colors);
+  document.getElementById("fontModal").classList.remove("show");
+});
+document.getElementById("fontReset").addEventListener("click", function() {
+  document.getElementById("h1Color").value = FONT_DEFAULT.h1; document.getElementById("h1Text").value = FONT_DEFAULT.h1;
+  document.getElementById("h2Color").value = FONT_DEFAULT.h2; document.getElementById("h2Text").value = FONT_DEFAULT.h2;
+  document.getElementById("h3Color").value = FONT_DEFAULT.h3; document.getElementById("h3Text").value = FONT_DEFAULT.h3;
+  document.getElementById("h4Color").value = FONT_DEFAULT.h4; document.getElementById("h4Text").value = FONT_DEFAULT.h4;
+  document.getElementById("h5Color").value = FONT_DEFAULT.h5; document.getElementById("h5Text").value = FONT_DEFAULT.h5;
+  document.getElementById("h6Color").value = FONT_DEFAULT.h6; document.getElementById("h6Text").value = FONT_DEFAULT.h6;
+  document.getElementById("bodyColor").value = FONT_DEFAULT.body; document.getElementById("bodyText").value = FONT_DEFAULT.body;
+  document.getElementById("thColor").value = FONT_DEFAULT.th; document.getElementById("thText").value = FONT_DEFAULT.th;
+  saveFontColors(Object.assign({}, FONT_DEFAULT));
 });
 loadTheme();
 uploadArea.addEventListener("click", function() { fileInput.click(); });
 uploadArea.addEventListener("dragover", function(e) { e.preventDefault(); uploadArea.classList.add("dragover"); });
 uploadArea.addEventListener("dragleave", function() { uploadArea.classList.remove("dragover"); });
-uploadArea.addEventListener("drop", function(e) {
-  e.preventDefault();
-  uploadArea.classList.remove("dragover");
-  const file = e.dataTransfer.files[0];
-  if (file) handleFile(file);
-});
+uploadArea.addEventListener("drop", function(e) { e.preventDefault(); uploadArea.classList.remove("dragover"); const file = e.dataTransfer.files[0]; if (file) handleFile(file); });
 fileInput.addEventListener("change", function(e) { if (e.target.files[0]) handleFile(e.target.files[0]); });
 function handleFile(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
     mdContent = e.target.result;
+    originalFileName = file.name.replace(/\.[^/.]+$/, "");
     document.getElementById("fileName").textContent = file.name;
     document.getElementById("fileSize").textContent = (file.size / 1024).toFixed(1) + " KB";
     uploadArea.style.display = "none";
@@ -550,20 +350,11 @@ function handleFile(file) {
   reader.readAsText(file);
 }
 btnRemove.addEventListener("click", function() {
-  mdContent = "";
-  fileInput.value = "";
-  uploadArea.style.display = "block";
-  fileCard.style.display = "none";
-  resultArea.style.display = "none";
+  mdContent = ""; originalFileName = "document"; fileInput.value = "";
+  uploadArea.style.display = "block"; fileCard.style.display = "none"; resultArea.style.display = "none";
 });
-function setProgress(pct, text) {
-  progressWrap.style.display = "block";
-  progressFill.style.width = pct + "%";
-  progressText.textContent = text;
-}
-function hideProgress() {
-  setTimeout(function() { progressWrap.style.display = "none"; }, 500);
-}
+function setProgress(pct, text) { progressWrap.style.display = "block"; progressFill.style.width = pct + "%"; progressText.textContent = text; }
+function hideProgress() { setTimeout(function() { progressWrap.style.display = "none"; }, 500); }
 function parseMarkdown(text) {
   const tokens = marked.lexer(text);
   const tables = [];
@@ -571,11 +362,7 @@ function parseMarkdown(text) {
     for (let i = 0; i < tokList.length; i++) {
       const t = tokList[i];
       if (t.type === "table") {
-        tables.push({
-          header: t.header.map(function(h) { return h.text; }),
-          align: t.align,
-          rows: t.rows.map(function(r) { return r.map(function(c) { return c.text; }); })
-        });
+        tables.push({ header: t.header.map(function(h) { return h.text; }), align: t.align, rows: t.rows.map(function(r) { return r.map(function(c) { return c.text; }); }) });
       }
       if (t.tokens) findTables(t.tokens);
     }
@@ -593,32 +380,25 @@ async function generateDocx() {
   const children = [];
   for (let i = 0; i < tokens.length; i++) {
     const nodes = await tokenToDocx(tokens[i]);
-    if (Array.isArray(nodes)) {
-      for (let j = 0; j < nodes.length; j++) children.push(nodes[j]);
-    } else if (nodes) {
-      children.push(nodes);
-    }
+    if (Array.isArray(nodes)) { for (let j = 0; j < nodes.length; j++) children.push(nodes[j]); }
+    else if (nodes) { children.push(nodes); }
   }
   setProgress(70, "正在生成 Word 文件...");
+  const fc = getFontColors();
   const doc = new docx.Document({
     styles: {
       paragraphStyles: [
-        { id: "Normal", name: "Normal", run: { font: { name: "Calibri" }, size: 22 } },
-        { id: "Heading1", name: "Heading 1", run: { font: { name: "Calibri" }, size: 36, bold: true, color: "1a1a2e" }, paragraph: { spacing: { after: 200 } } },
-        { id: "Heading2", name: "Heading 2", run: { font: { name: "Calibri" }, size: 28, bold: true, color: "16213e" }, paragraph: { spacing: { after: 160 } } },
-        { id: "Heading3", name: "Heading 3", run: { font: { name: "Calibri" }, size: 24, bold: true, color: "333333" }, paragraph: { spacing: { after: 120 } } },
-        { id: "Heading4", name: "Heading 4", run: { font: { name: "Calibri" }, size: 22, bold: true, color: "444444" }, paragraph: { spacing: { after: 100 } } },
-        { id: "Heading5", name: "Heading 5", run: { font: { name: "Calibri" }, size: 22, bold: true, color: "555555" }, paragraph: { spacing: { after: 80 } } },
-        { id: "Heading6", name: "Heading 6", run: { font: { name: "Calibri" }, size: 22, bold: true, color: "666666" }, paragraph: { spacing: { after: 80 } } },
-        { id: "CodeBlock", name: "Code Block", run: { font: { name: "Consolas" }, size: 18, color: "333333" }, paragraph: { spacing: { before: 80, after: 80 } } },
+        { id: "Normal", name: "Normal", run: { font: { name: "Calibri" }, size: 22, color: fc.body } },
+        { id: "Heading1", name: "Heading 1", run: { font: { name: "Calibri" }, size: 36, bold: true, color: fc.h1 }, paragraph: { spacing: { after: 200 } } },
+        { id: "Heading2", name: "Heading 2", run: { font: { name: "Calibri" }, size: 28, bold: true, color: fc.h2 }, paragraph: { spacing: { after: 160 } } },
+        { id: "Heading3", name: "Heading 3", run: { font: { name: "Calibri" }, size: 24, bold: true, color: fc.h3 }, paragraph: { spacing: { after: 120 } } },
+        { id: "Heading4", name: "Heading 4", run: { font: { name: "Calibri" }, size: 22, bold: true, color: fc.h4 }, paragraph: { spacing: { after: 100 } } },
+        { id: "Heading5", name: "Heading 5", run: { font: { name: "Calibri" }, size: 22, bold: true, color: fc.h5 }, paragraph: { spacing: { after: 80 } } },
+        { id: "Heading6", name: "Heading 6", run: { font: { name: "Calibri" }, size: 22, bold: true, color: fc.h6 }, paragraph: { spacing: { after: 80 } } },
+        { id: "CodeBlock", name: "Code Block", run: { font: { name: "Consolas" }, size: 18, color: fc.body }, paragraph: { spacing: { before: 80, after: 80 } } },
       ]
     },
-    sections: [{
-      properties: {
-        page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } }
-      },
-      children: children
-    }]
+    sections: [{ properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } }, children: children }]
   });
   setProgress(90, "正在打包...");
   docBlob = await docx.Packer.toBlob(doc);
@@ -626,27 +406,20 @@ async function generateDocx() {
   hideProgress();
 }
 async function tokenToDocx(token) {
+  const fc = getFontColors();
   if (token.type === "heading") {
     const level = Math.min(token.depth, 6);
-    return new docx.Paragraph({
-      text: token.text,
-      heading: docx.HeadingLevel["HEADING_" + level],
-      spacing: { after: 200 }
-    });
+    return new docx.Paragraph({ text: token.text, heading: docx.HeadingLevel["HEADING_" + level], spacing: { after: 200 } });
   }
   if (token.type === "paragraph") {
-    const runs = inlineToRuns(token.tokens || []);
+    const runs = inlineToRuns(token.tokens || [], fc.body);
     return new docx.Paragraph({ children: runs, spacing: { after: 120 } });
   }
   if (token.type === "table") {
     const rows = [];
     const headerCells = token.header.map(function(h, i) {
       return new docx.TableCell({
-        children: [new docx.Paragraph({
-          children: inlineToRuns(h.tokens || []),
-          alignment: alignToDocx(token.align[i]),
-          spacing: { before: 60, after: 60 }
-        })],
+        children: [new docx.Paragraph({ children: inlineToRuns(h.tokens || [], fc.th), alignment: alignToDocx(token.align[i]), spacing: { before: 60, after: 60 } })],
         shading: { fill: "4472C4", type: docx.ShadingType.CLEAR },
         verticalAlign: docx.VerticalAlign.CENTER,
         borders: tableCellBorders()
@@ -657,11 +430,7 @@ async function tokenToDocx(token) {
       const row = token.rows[r];
       const cells = row.map(function(c, i) {
         return new docx.TableCell({
-          children: [new docx.Paragraph({
-            children: inlineToRuns(c.tokens || []),
-            alignment: alignToDocx(token.align[i]),
-            spacing: { before: 40, after: 40 }
-          })],
+          children: [new docx.Paragraph({ children: inlineToRuns(c.tokens || [], fc.body), alignment: alignToDocx(token.align[i]), spacing: { before: 40, after: 40 } })],
           verticalAlign: docx.VerticalAlign.CENTER,
           borders: tableCellBorders()
         });
@@ -685,7 +454,7 @@ async function tokenToDocx(token) {
     const lines = token.text.split("\n");
     return lines.map(function(line) {
       return new docx.Paragraph({
-        children: [new docx.TextRun({ text: line || " ", font: { name: "Consolas" }, size: 18, color: "333333" })],
+        children: [new docx.TextRun({ text: line || " ", font: { name: "Consolas" }, size: 18, color: fc.body })],
         shading: { fill: "F5F5F5" },
         spacing: { before: 20, after: 20, line: 276 },
         style: "CodeBlock"
@@ -714,45 +483,29 @@ async function tokenToDocx(token) {
   if (token.type === "list") {
     const items = token.items || [];
     return items.map(function(item) {
-      return new docx.Paragraph({
-        children: inlineToRuns(item.tokens || []),
-        bullet: { level: 0 },
-        spacing: { after: 60 }
-      });
+      return new docx.Paragraph({ children: inlineToRuns(item.tokens || [], fc.body), bullet: { level: 0 }, spacing: { after: 60 } });
     });
   }
   if (token.type === "hr") {
-    return new docx.Paragraph({
-      border: { bottom: { color: "CCCCCC", space: 1, style: docx.BorderStyle.SINGLE, size: 6 } },
-      spacing: { before: 200, after: 200 }
-    });
+    return new docx.Paragraph({ border: { bottom: { color: "CCCCCC", space: 1, style: docx.BorderStyle.SINGLE, size: 6 } }, spacing: { before: 200, after: 200 } });
   }
   if (token.type === "space") return null;
   return null;
 }
-function inlineToRuns(tokens) {
+function inlineToRuns(tokens, defaultColor) {
   const runs = [];
   for (let i = 0; i < (tokens || []).length; i++) {
     const t = tokens[i];
-    if (t.type === "text") {
-      runs.push(new docx.TextRun({ text: t.text, font: { name: "Calibri" }, size: 22 }));
-    } else if (t.type === "strong") {
-      runs.push(new docx.TextRun({ text: t.text, bold: true, font: { name: "Calibri" }, size: 22 }));
-    } else if (t.type === "em") {
-      runs.push(new docx.TextRun({ text: t.text, italics: true, font: { name: "Calibri" }, size: 22 }));
-    } else if (t.type === "codespan") {
-      runs.push(new docx.TextRun({ text: t.text, font: { name: "Consolas" }, size: 20, shading: { fill: "F0F0F0" } }));
-    } else if (t.type === "del") {
-      runs.push(new docx.TextRun({ text: t.text, strike: true, font: { name: "Calibri" }, size: 22 }));
-    } else if (t.type === "link") {
-      runs.push(new docx.TextRun({ text: t.text || t.href, color: "0563C1", underline: { type: docx.UnderlineType.SINGLE }, font: { name: "Calibri" }, size: 22 }));
-    } else if (t.type === "br") {
-      runs.push(new docx.TextRun({ text: "", break: 1 }));
-    } else if (t.text) {
-      runs.push(new docx.TextRun({ text: t.text, font: { name: "Calibri" }, size: 22 }));
-    }
+    if (t.type === "text") { runs.push(new docx.TextRun({ text: t.text, font: { name: "Calibri" }, size: 22, color: defaultColor })); }
+    else if (t.type === "strong") { runs.push(new docx.TextRun({ text: t.text, bold: true, font: { name: "Calibri" }, size: 22, color: defaultColor })); }
+    else if (t.type === "em") { runs.push(new docx.TextRun({ text: t.text, italics: true, font: { name: "Calibri" }, size: 22, color: defaultColor })); }
+    else if (t.type === "codespan") { runs.push(new docx.TextRun({ text: t.text, font: { name: "Consolas" }, size: 20, shading: { fill: "F0F0F0" }, color: defaultColor })); }
+    else if (t.type === "del") { runs.push(new docx.TextRun({ text: t.text, strike: true, font: { name: "Calibri" }, size: 22, color: defaultColor })); }
+    else if (t.type === "link") { runs.push(new docx.TextRun({ text: t.text || t.href, color: "0563C1", underline: { type: docx.UnderlineType.SINGLE }, font: { name: "Calibri" }, size: 22 })); }
+    else if (t.type === "br") { runs.push(new docx.TextRun({ text: "", break: 1 })); }
+    else if (t.text) { runs.push(new docx.TextRun({ text: t.text, font: { name: "Calibri" }, size: 22, color: defaultColor })); }
   }
-  if (runs.length === 0) runs.push(new docx.TextRun({ text: " ", font: { name: "Calibri" }, size: 22 }));
+  if (runs.length === 0) runs.push(new docx.TextRun({ text: " ", font: { name: "Calibri" }, size: 22, color: defaultColor }));
   return runs;
 }
 function alignToDocx(align) {
@@ -773,7 +526,7 @@ function renderPreview(tables) {
   let totalRows = 0;
   for (let i = 0; i < tables.length; i++) totalRows += tables[i].rows.length;
   const totalLines = mdContent.split("\n").length;
-  document.getElementById("statsBar").innerHTML = 
+  document.getElementById("statsBar").innerHTML =
     '<div class="stat-item"><div class="stat-num">' + tables.length + '</div><div class="stat-label">识别表格</div></div>' +
     '<div class="stat-item"><div class="stat-num">' + totalRows + '</div><div class="stat-label">数据行数</div></div>' +
     '<div class="stat-item"><div class="stat-num">' + totalLines + '</div><div class="stat-label">文档总行</div></div>';
@@ -834,7 +587,7 @@ document.getElementById("btnDownload").addEventListener("click", function() {
   const url = URL.createObjectURL(docBlob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "converted_document.docx";
+  a.download = originalFileName + "♡.docx";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
